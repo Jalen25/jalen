@@ -1,19 +1,18 @@
-import { supabase } from '@/lib/supabase';
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@/lib/supabase';
 
-const DEFAULT_USER = 'default-user';
-
-// GET - Buscar uma memória específica
 export async function GET(
-  req: Request,
-  { params }: { params: { id: string } }
+  req: NextRequest,
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await context.params; // ← AWAIT AQUI!
+    const supabase = createClient();
+    
     const { data: memory, error } = await supabase
       .from('memories')
       .select('*')
-      .eq('id', params.id)
-      .eq('user_id', DEFAULT_USER)
+      .eq('id', id)
       .single();
 
     if (error) throw error;
@@ -21,66 +20,31 @@ export async function GET(
     return NextResponse.json({ success: true, memory });
   } catch (error) {
     return NextResponse.json(
-      { success: false, error: 'Memória não encontrada' },
+      { success: false, error: 'Memory not found' },
       { status: 404 }
     );
   }
 }
 
-// PATCH - Atualizar memória
-export async function PATCH(
-  req: Request,
-  { params }: { params: { id: string } }
-) {
-  try {
-    const body = await req.json();
-    const { content, tags, type } = body;
-
-    const updates: any = {};
-    if (content) updates.content = content;
-    if (tags) updates.tags = tags;
-    if (type) updates.type = type;
-
-    const { data: memory, error } = await supabase
-      .from('memories')
-      .update(updates)
-      .eq('id', params.id)
-      .eq('user_id', DEFAULT_USER)
-      .select()
-      .single();
-
-    if (error) throw error;
-
-    return NextResponse.json({ success: true, memory });
-  } catch (error) {
-    return NextResponse.json(
-      { success: false, error: 'Falha ao atualizar' },
-      { status: 500 }
-    );
-  }
-}
-
-// DELETE - Deletar memória
 export async function DELETE(
-  req: Request,
-  { params }: { params: { id: string } }
+  req: NextRequest,
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await context.params; // ← AWAIT AQUI!
+    const supabase = createClient();
+    
     const { error } = await supabase
       .from('memories')
       .delete()
-      .eq('id', params.id)
-      .eq('user_id', DEFAULT_USER);
+      .eq('id', id);
 
     if (error) throw error;
 
-    return NextResponse.json({ 
-      success: true, 
-      message: 'Memória deletada' 
-    });
+    return NextResponse.json({ success: true });
   } catch (error) {
     return NextResponse.json(
-      { success: false, error: 'Falha ao deletar' },
+      { success: false, error: 'Failed to delete memory' },
       { status: 500 }
     );
   }
