@@ -1,15 +1,16 @@
-import { createClient as createSupabaseClient } from '@supabase/supabase-js';
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
+import { createBrowserClient, createServerClient } from '@supabase/ssr'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
-// Instância do cliente (para compatibilidade)
-export const supabase = createSupabaseClient(supabaseUrl, supabaseAnonKey);
-
-// Função para criar cliente (para as rotas API)
+// Cliente para uso no navegador (componentes 'use client')
 export function createClient() {
-  return createSupabaseClient(supabaseUrl, supabaseAnonKey);
+  return createBrowserClient(supabaseUrl, supabaseAnonKey)
 }
+
+// Instância direta (compatibilidade)
+export const supabase = createSupabaseClient(supabaseUrl, supabaseAnonKey)
 
 // Tipos TypeScript para nossas tabelas
 export type Memory = {
