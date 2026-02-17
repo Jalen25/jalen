@@ -1,4 +1,6 @@
 import { supabase } from '@/lib/supabase';
+import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
 import Groq from 'groq-sdk';
 import OpenAI from 'openai';
 import { NextResponse } from 'next/server';
@@ -40,8 +42,6 @@ Extraia apenas o que for genuinamente importante e reutilizável.
 Ignore saudações, agradecimentos e conversa casual.
 Retorne APENAS o JSON, sem explicações adicionais.`;
 
-const DEFAULT_USER = 'default-user';
-
 // Função para gerar embedding com OpenAI
 async function generateEmbedding(text: string): Promise<number[]> {
   try {
@@ -58,6 +58,34 @@ async function generateEmbedding(text: string): Promise<number[]> {
 
 export async function POST(req: Request) {
   try {
+    // Pegar usuário logado
+    const cookieStore = await cookies();
+    const supabaseServer = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return cookieStore.getAll();
+          },
+          setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              cookieStore.set(name, value, options)
+            );
+          },
+        },
+      }
+    );
+
+    const { data: { user } } = await supabaseServer.auth.getUser();
+    
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Não autenticado' },
+        { status: 401 }
+      );
+    }
+
     const body = await req.json();
     const { conversation } = body;
 
@@ -88,7 +116,7 @@ export async function POST(req: Request) {
     const { data: conversationData, error: convError } = await supabase
       .from('conversations')
       .insert({
-        user_id: DEFAULT_USER,
+        user_id: user.id,
         raw_text: conversation,
         source: 'manual',
         processed: true
@@ -102,7 +130,7 @@ export async function POST(req: Request) {
     if (result.extractions && result.extractions.length > 0) {
       const memories = result.extractions.map((ext: any) => ({
         conversation_id: conversationData.id,
-        user_id: DEFAULT_USER,
+        user_id: user.id,
         type: ext.type,
         content: ext.content,
         tags: ext.tags || [],
@@ -121,13 +149,10 @@ export async function POST(req: Request) {
       
       for (const memory of savedMemories || []) {
         try {
-          // Combina conteúdo + tags para embedding mais rico
           const textForEmbedding = `${memory.content} ${memory.tags.join(' ')}`;
-          
           const embedding = await generateEmbedding(textForEmbedding);
           
           if (embedding.length > 0) {
-            // Atualiza a memória com o embedding
             await supabase
               .from('memories')
               .update({ embedding })

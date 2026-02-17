@@ -1,12 +1,12 @@
 import { supabase } from '@/lib/supabase';
+import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
 import OpenAI from 'openai';
 import { NextResponse } from 'next/server';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
-
-const DEFAULT_USER = 'default-user';
 
 // Função para gerar embedding da query
 async function generateEmbedding(text: string): Promise<number[]> {
@@ -24,6 +24,34 @@ async function generateEmbedding(text: string): Promise<number[]> {
 
 export async function POST(req: Request) {
   try {
+    // Pegar usuário logado
+    const cookieStore = await cookies();
+    const supabaseServer = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return cookieStore.getAll();
+          },
+          setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              cookieStore.set(name, value, options)
+            );
+          },
+        },
+      }
+    );
+
+    const { data: { user } } = await supabaseServer.auth.getUser();
+    
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Não autenticado' },
+        { status: 401 }
+      );
+    }
+
     const { query, type, limit = 20 } = await req.json();
 
     if (!query || query.trim().length === 0) {
@@ -39,24 +67,22 @@ export async function POST(req: Request) {
     const queryEmbedding = await generateEmbedding(query);
 
     if (queryEmbedding.length === 0) {
-      // Fallback: busca textual se embedding falhar
-      return await textSearch(query, type, limit);
+      return await textSearch(query, type, limit, user.id);
     }
 
     // 2. Busca vetorial usando PostgreSQL + pgvector
     let rpcQuery = supabase.rpc('match_memories', {
       query_embedding: queryEmbedding,
-      match_threshold: 0.3, // 30% de similaridade mínima
+      match_threshold: 0.3,
       match_count: limit,
-      filter_user_id: DEFAULT_USER
+      filter_user_id: user.id
     });
 
     const { data: memories, error } = await rpcQuery;
 
     if (error) {
       console.error('Erro na busca vetorial:', error);
-      // Fallback: busca textual
-      return await textSearch(query, type, limit);
+      return await textSearch(query, type, limit, user.id);
     }
 
     // 3. Filtrar por tipo se necessário
@@ -85,13 +111,13 @@ export async function POST(req: Request) {
 }
 
 // Função de fallback: busca textual
-async function textSearch(query: string, type: string | undefined, limit: number) {
+async function textSearch(query: string, type: string | undefined, limit: number, userId: string) {
   console.log('⚠️ Usando busca textual (fallback)');
   
   let searchQuery = supabase
     .from('memories')
     .select('*')
-    .eq('user_id', DEFAULT_USER)
+    .eq('user_id', userId)
     .order('created_at', { ascending: false })
     .limit(limit);
 
@@ -111,7 +137,7 @@ async function textSearch(query: string, type: string | undefined, limit: number
 
   const results = memories?.map(memory => ({
     ...memory,
-    similarity: 0.5 // Similaridade fictícia para busca textual
+    similarity: 0.5
   })) || [];
 
   return NextResponse.json({

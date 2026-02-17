@@ -1,10 +1,38 @@
 import { supabase } from '@/lib/supabase';
+import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
-
-const DEFAULT_USER = 'default-user';
 
 export async function GET(req: Request) {
   try {
+    // Pegar usuário logado
+    const cookieStore = await cookies();
+    const supabaseServer = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return cookieStore.getAll();
+          },
+          setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              cookieStore.set(name, value, options)
+            );
+          },
+        },
+      }
+    );
+
+    const { data: { user } } = await supabaseServer.auth.getUser();
+    
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Não autenticado' },
+        { status: 401 }
+      );
+    }
+
     const { searchParams } = new URL(req.url);
     const type = searchParams.get('type');
     const limit = parseInt(searchParams.get('limit') || '50');
@@ -12,7 +40,7 @@ export async function GET(req: Request) {
     let query = supabase
       .from('memories')
       .select('*')
-      .eq('user_id', DEFAULT_USER)
+      .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .limit(limit);
 
