@@ -39,15 +39,33 @@ export default function Home() {
   const [editTags, setEditTags] = useState('');
 
   const [userEmail, setUserEmail] = useState('');
+  const [isDark, setIsDark] = useState(false);
   const router = useRouter();
   const supabase = createClient();
 
+  const toggleDark = () => {
+    const newDark = !isDark;
+    setIsDark(newDark);
+    if (newDark) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+    }
+  };
+
   useEffect(() => {
     loadSavedMemories();
-    // Pegar email do usuário logado
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (user) setUserEmail(user.email || '');
     });
+    // Carregar tema salvo
+    const saved = localStorage.getItem('theme');
+    if (saved === 'dark') {
+      setIsDark(true);
+      document.documentElement.classList.add('dark');
+    }
   }, []);
 
   const handleLogout = async () => {
@@ -347,13 +365,20 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-8">
+    <div className="min-h-screen p-8 transition-colors duration-300" style={{background: 'var(--background)'}}>
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-12 relative">
           {/* Botão logout */}
           {userEmail && (
             <div className="absolute right-0 top-0 flex items-center gap-3">
-              <span className="text-sm text-gray-500">👤 {userEmail}</span>
+              <button
+                onClick={toggleDark}
+                className="px-3 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg text-lg hover:opacity-80"
+                title="Alternar tema"
+              >
+                {isDark ? '☀️' : '🌙'}
+              </button>
+              <span className="text-sm text-gray-500 dark:text-gray-400">👤 {userEmail}</span>
               <button
                 onClick={handleLogout}
                 className="px-4 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 text-sm font-semibold"
