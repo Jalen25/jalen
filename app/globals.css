@@ -9,8 +9,6 @@
   --text-secondary: #6b7280;
   --input-border: #e1e5e9;
   --input-bg: #ffffff;
-  --tab-inactive: #ffffff;
-  --tab-inactive-text: #6b7280;
 }
 
 .dark {
@@ -22,8 +20,6 @@
   --text-secondary: #94a3b8;
   --input-border: #2d3148;
   --input-bg: #1e2235;
-  --tab-inactive: #1a1d2e;
-  --tab-inactive-text: #94a3b8;
 }
 
 body {
