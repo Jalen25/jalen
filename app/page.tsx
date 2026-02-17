@@ -273,10 +273,10 @@ export default function Home() {
   const renderMemoryCard = (memory: Memory, index: number) => {
     const isEditing = editingMemory?.id === memory.id;
 
-    return (
+return (
       <div
         key={memory.id || index}
-        className="border-2 border-gray-100 rounded-xl p-6 hover:shadow-lg transition-shadow duration-200"
+        className="border-2 border-gray-100 dark:border-gray-700 dark:bg-gray-800 rounded-xl p-6 hover:shadow-lg transition-shadow duration-200"
       >
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-3">
@@ -291,20 +291,20 @@ export default function Home() {
             )}
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-500">
+            <span className="text-sm text-gray-500 dark:text-gray-400">
               {formatDate(memory.created_at)}
             </span>
             {activeTab === 'saved' && !isEditing && (
               <>
                 <button
                   onClick={() => handleStartEdit(memory)}
-                  className="px-3 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 text-sm"
+                  className="px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 text-sm"
                 >
                   ✏️ Editar
                 </button>
                 <button
                   onClick={() => handleDelete(memory.id)}
-                  className="px-3 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 text-sm"
+                  className="px-3 py-1 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 rounded hover:bg-red-200 text-sm"
                 >
                   🗑️ Deletar
                 </button>
@@ -318,7 +318,7 @@ export default function Home() {
             <textarea
               value={editContent}
               onChange={(e) => setEditContent(e.target.value)}
-              className="w-full p-3 border rounded-lg"
+              className="w-full p-3 border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg"
               rows={4}
             />
             <input
@@ -326,7 +326,7 @@ export default function Home() {
               value={editTags}
               onChange={(e) => setEditTags(e.target.value)}
               placeholder="Tags separadas por vírgula"
-              className="w-full p-3 border rounded-lg"
+              className="w-full p-3 border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg"
             />
             <div className="flex gap-2">
               <button
@@ -345,14 +345,14 @@ export default function Home() {
           </div>
         ) : (
           <>
-            <p className="text-gray-700 text-lg mb-4 leading-relaxed">
+            <p className="text-gray-700 dark:text-gray-200 text-lg mb-4 leading-relaxed">
               {memory.content}
             </p>
             <div className="flex flex-wrap gap-2">
               {memory.tags.map((tag, i) => (
                 <span
                   key={i}
-                  className="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-sm"
+                  className="px-3 py-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-full text-sm"
                 >
                   #{tag}
                 </span>
